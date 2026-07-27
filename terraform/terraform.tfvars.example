@@ -8,3 +8,4 @@ project_name = "vpc-guestbook"
 # never commit an actual password. This file is just the template.
 db_username = "guestbook_admin"
 db_password = "CHANGE-ME-to-a-real-strong-password"
+github_repo = "kr3ativ3hustl3/vpc-guestbook"

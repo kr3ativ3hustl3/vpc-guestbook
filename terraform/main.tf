@@ -83,3 +83,13 @@ module "load_balancer" {
   db_security_group_id   = module.database.security_group_id
   autoscaling_group_name = module.compute.autoscaling_group_name
 }
+
+module "github_cicd" {
+  source = "./modules/github-cicd"
+
+  providers = { aws = aws }
+
+  project_name          = var.project_name
+  github_repo           = var.github_repo
+  autoscaling_group_arn  = module.compute.autoscaling_group_arn
+}

@@ -42,3 +42,8 @@ output "site_url" {
   description = "The URL to actually visit the guestbook app"
   value       = "http://${module.load_balancer.alb_dns_name}"
 }
+
+output "github_actions_role_arn" {
+  description = "IAM role ARN for GitHub Actions to assume via OIDC — paste into the GitHub secret AWS_GITHUB_ACTIONS_ROLE_ARN"
+  value       = module.github_cicd.role_arn
+}

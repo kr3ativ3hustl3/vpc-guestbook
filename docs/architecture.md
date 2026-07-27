@@ -130,6 +130,25 @@ that bridges an existing ASG (referenced by name, a one-directional
 input) to a target group, breaking the cycle cleanly rather than
 merging the two modules into one to work around it.
 
+### Reusing the existing GitHub OIDC provider, not creating a second one
+GitHub's OIDC identity provider is registered once per AWS account at
+a fixed URL, not once per project. The Cloud Resume Challenge project
+already created one in this same account; a second `aws_iam_
+openid_connect_provider` resource here would fail with "already
+exists." A data source referencing the existing provider avoids the
+collision — the same fix documented in that project's troubleshooting
+log, applied proactively here instead of being rediscovered the hard
+way a second time.
+
+### Deploy via ASG instance refresh, not a build/artifact pipeline
+Since instances already fetch the app fresh from GitHub's `main`
+branch at boot (a Phase 3 decision), "deploying a change" doesn't need
+a separate build or artifact step — it just means replacing running
+instances with new ones that repeat that same startup process.
+`aws autoscaling start-instance-refresh` does this as a native AWS
+feature: gradual, one instance at a time, with a minimum-healthy-
+percentage guardrail, rather than a custom rolling-deploy script.
+
 ## Cost breakdown (expected)
 
 | Service | Free tier | Expected usage | Expected cost |
@@ -172,6 +191,12 @@ tradeoff a junior cloud engineer needs to reason about.
   the app tier's security group, on the Postgres port only. No tier
   is directly reachable by anything except the tier immediately in
   front of it.
+- Phase 5: GitHub Actions authenticates via the account's existing
+  OIDC provider, short-lived tokens, no static AWS credentials in
+  GitHub. Its IAM role can perform exactly 3 read/write actions, all
+  scoped to this one specific Auto Scaling Group — it cannot touch any
+  other AWS resource, including the ASG's underlying EC2 instances,
+  the database, or any other project in the same account.
 
 ## Observability posture (running list, updated per phase)
 

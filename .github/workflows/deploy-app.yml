@@ -1,0 +1,52 @@
+name: Deploy App
+
+# Triggers an ASG rolling instance refresh whenever app code changes.
+# Existing instances get replaced one at a time with new ones that
+# re-run the startup script — which re-pulls the latest app.py from
+# this same `main` branch. There's no separate "build" artifact here;
+# the running instances and the repo's main branch are always meant
+# to match.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Start rolling instance refresh
+        run: |
+          aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name vpc-guestbook-asg \
+            --preferences '{"MinHealthyPercentage": 50, "InstanceWarmup": 120}'
+
+      - name: Wait for refresh to complete
+        run: |
+          for i in $(seq 1 30); do
+            STATUS=$(aws autoscaling describe-instance-refreshes \
+              --auto-scaling-group-name vpc-guestbook-asg \
+              --query "InstanceRefreshes[0].Status" --output text)
+            echo "Refresh status: $STATUS"
+            if [ "$STATUS" = "Successful" ]; then
+              exit 0
+            fi
+            if [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ]; then
+              echo "Instance refresh did not succeed"
+              exit 1
+            fi
+            sleep 20
+          done
+          echo "Timed out waiting for instance refresh"
+          exit 1

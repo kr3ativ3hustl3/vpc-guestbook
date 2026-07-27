@@ -51,3 +51,8 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
+
+variable "github_repo" {
+  description = "Your GitHub repo in owner/repo format, e.g. kr3ativ3hustl3/vpc-guestbook"
+  type        = string
+}
