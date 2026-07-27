@@ -43,3 +43,15 @@ module "networking" {
   private_subnet_cidrs = var.private_subnet_cidrs
   db_subnet_cidrs      = var.db_subnet_cidrs
 }
+
+module "database" {
+  source = "./modules/database"
+
+  providers = { aws = aws }
+
+  project_name        = var.project_name
+  vpc_id              = module.networking.vpc_id
+  database_subnet_ids = module.networking.database_subnet_ids
+  db_username         = var.db_username
+  db_password         = var.db_password
+}

@@ -12,9 +12,10 @@ demonstrates core AWS networking and traditional compute — the pieces
 most cloud engineering interviews ask about directly: VPCs, subnets,
 security groups, load balancing, and Auto Scaling.
 
-**Status:** 🚧 In progress — Phase 1 of 6 complete (networking: VPC,
-subnets, NAT gateway). Reminder: NAT Gateway is now live and billing
-(~$32/month) — see cost note in docs/architecture.md.
+**Status:** 🚧 In progress — Phase 2 of 6 complete (RDS Postgres in
+isolated subnets). Reminder: RDS is free-tier eligible for 12 months;
+NAT Gateway from Phase 1 continues billing ~$32/month — see cost note
+in docs/architecture.md.
 
 ## Architecture
 
@@ -68,7 +69,7 @@ vpc-guestbook/
 
 - [x] **Phase 0** — Project scaffold, Terraform state (reusing project 1's backend)
 - [x] **Phase 1** — Networking: VPC, subnets, NAT gateway, route tables. See [`terraform/PHASE1-networking.md`](terraform/PHASE1-networking.md).
-- [ ] **Phase 2** — Database: RDS Postgres in isolated subnet
+- [x] **Phase 2** — Database: RDS Postgres in isolated subnet. See [`terraform/PHASE2-database.md`](terraform/PHASE2-database.md).
 - [ ] **Phase 3** — Compute: launch template, Auto Scaling Group, guestbook app
 - [ ] **Phase 4** — Load balancer + security groups (least-privilege between tiers)
 - [ ] **Phase 5** — SSM Session Manager access, CI/CD

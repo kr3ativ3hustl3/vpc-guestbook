@@ -57,6 +57,32 @@ outbound internet access, but their inbound availability through the
 ALB is unaffected. Worth stating explicitly if asked in an interview
 — it shows awareness of the tradeoff, not just a default choice.
 
+### Security group created empty, ingress added later in a separate resource
+The RDS security group is created in Phase 2 with zero inbound rules
+— not even a placeholder. The rule allowing the app tier to connect
+gets added as a separate `aws_security_group_rule` resource in
+Phase 4, once the app tier's own security group actually exists to
+reference. This means the database is genuinely unreachable from
+anything between Phase 2 and Phase 4, which is the correct default
+state for a resource with no legitimate reason to accept connections
+yet — rather than opening it prematurely and tightening it later.
+
+### Single-AZ RDS, not Multi-AZ
+Multi-AZ RDS roughly doubles the cost by running a synchronously
+replicated standby instance for automatic failover. That's the right
+call for a database serving real users, but not justified for a
+portfolio project's database, where an hour of downtime during a
+rebuild has no real consequence. Worth being able to name this
+tradeoff and explain when Multi-AZ *would* be justified.
+
+### `skip_final_snapshot = true`
+Normally risky — it means `terraform destroy` deletes the database
+with no final backup. For a real production database this would be a
+serious mistake. Here, the data is disposable test/demo content with
+no real value to preserve, and skipping the snapshot avoids leftover
+manual snapshots silently costing money after a `destroy`. Worth
+stating this is a deliberate exception, not an oversight.
+
 ## Cost breakdown (expected)
 
 | Service | Free tier | Expected usage | Expected cost |
@@ -84,6 +110,10 @@ tradeoff a junior cloud engineer needs to reason about.
   via NAT) — only reachable from inside the VPC. Public subnets host
   only the load balancer (added Phase 4); no compute lives there
   directly.
+- Phase 2: RDS security group created with zero inbound rules — the
+  database is unreachable from anything until Phase 4 explicitly
+  grants the app tier access. Not publicly accessible; sits in
+  subnets with no internet route at all.
 
 ## Observability posture (running list, updated per phase)
 

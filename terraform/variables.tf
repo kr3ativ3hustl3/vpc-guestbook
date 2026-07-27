@@ -39,3 +39,15 @@ variable "db_subnet_cidrs" {
   type        = list(string)
   default     = ["10.0.20.0/24", "10.0.21.0/24"]
 }
+
+variable "db_username" {
+  description = "Master username for the RDS instance"
+  type        = string
+  default     = "guestbook_admin"
+}
+
+variable "db_password" {
+  description = "Master password for the RDS instance — set a real value in terraform.tfvars, never commit it"
+  type        = string
+  sensitive   = true
+}
