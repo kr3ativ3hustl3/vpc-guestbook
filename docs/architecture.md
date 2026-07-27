@@ -1,0 +1,90 @@
+# Architecture Notes
+
+## Overview
+
+A three-tier web application on AWS: load balancer tier (public),
+application tier (private, Auto Scaling), and database tier (private,
+isolated). Built to demonstrate core AWS networking and traditional
+compute patterns, as a companion to the serverless Cloud Resume
+Challenge project.
+
+## Design decisions & tradeoffs
+
+### Reusing project 1's Terraform state backend, with a separate key
+Rather than provisioning a new S3 bucket + DynamoDB table for this
+project's state, it reuses the existing backend from the Cloud Resume
+Challenge with a different `key` (effectively a different file path
+within the same bucket). This avoids repeating Phase 0 account-setup
+work while keeping the two projects' state completely independent —
+Terraform tracks state per-key, so there's no risk of one project's
+`apply` affecting the other's resources.
+
+### EC2 + Auto Scaling Group, not ECS/Fargate
+Containers are arguably the more "modern" choice, but they add a real
+abstraction layer over the underlying networking. Building the raw
+EC2/ASG version first means actually working through what the ALB,
+target groups, subnets, and security groups are doing without a
+container orchestrator managing it — the fundamentals most interviews
+ask about directly. A natural project 3 would be containerizing this
+same app and migrating it to ECS Fargate, with the contrast between
+the two approaches becoming its own talking point.
+
+### SSM Session Manager, not a bastion host
+The traditional pattern for reaching private-subnet instances is a
+"bastion host" — a small EC2 instance in the public subnet with SSH
+open, that you hop through. AWS's current recommendation is Session
+Manager instead: no open inbound ports anywhere, no SSH key
+management, and every session is logged in CloudTrail. It requires an
+IAM role and the SSM agent (pre-installed on Amazon Linux 2023 AMIs)
+rather than a security group rule, which is a worthwhile tradeoff.
+
+### RDS in an isolated subnet with no route to the internet
+The database subnet has no NAT gateway route and no internet gateway
+route at all — only the application tier's security group is allowed
+to reach it, on the database port only. This is stricter than many
+tutorials, which put the database in a "private" subnet that still has
+outbound internet access via NAT. For a database that never needs to
+call out to the internet, that access is pure unnecessary attack
+surface.
+
+### Single NAT Gateway, not one per AZ
+A NAT Gateway per AZ is the textbook highly-available answer, but each
+one bills separately (~$32/mo each — doubling to ~$64/mo for two).
+For a portfolio project not serving real production traffic, a single
+NAT Gateway is a reasonable, explainable tradeoff: if that AZ has an
+issue, private-subnet instances in the other AZ temporarily lose
+outbound internet access, but their inbound availability through the
+ALB is unaffected. Worth stating explicitly if asked in an interview
+— it shows awareness of the tradeoff, not just a default choice.
+
+## Cost breakdown (expected)
+
+| Service | Free tier | Expected usage | Expected cost |
+|---|---|---|---|
+| VPC, subnets, route tables | Always free | N/A | $0 |
+| NAT Gateway | **Not free** | 1 gateway, low traffic | ~$32/mo + data |
+| EC2 (t3.micro or t2.micro) | 750 hrs/mo (12mo) | 2 instances | $0 (within free tier, first 12mo) |
+| Application Load Balancer | **Not free** | 1 ALB | ~$16-20/mo |
+| RDS (db.t3.micro or db.t4g.micro) | 750 hrs/mo (12mo) | 1 instance | $0 (within free tier, first 12mo) |
+
+**Important cost note, unlike project 1:** this architecture is
+**not** free-tier-friendly the way the serverless project was. The
+NAT Gateway and Application Load Balancer both bill hourly regardless
+of traffic — expect roughly **$45-55/month** while this is running.
+Plan to `terraform destroy` when not actively using it for demos or
+interviews, and budget accordingly. This cost reality is itself worth
+understanding and being able to explain — it's exactly the kind of
+tradeoff a junior cloud engineer needs to reason about.
+
+## Security posture (running list, updated per phase)
+
+- Phase 0: Terraform state reuses project 1's encrypted, versioned,
+  private S3 backend.
+- Phase 1: database subnets have zero route to the internet (not even
+  via NAT) — only reachable from inside the VPC. Public subnets host
+  only the load balancer (added Phase 4); no compute lives there
+  directly.
+
+## Observability posture (running list, updated per phase)
+
+- (To be added in a later phase.)
