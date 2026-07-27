@@ -78,14 +78,22 @@ resource "aws_iam_role_policy" "refresh_asg" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "autoscaling:StartInstanceRefresh",
-        "autoscaling:DescribeInstanceRefreshes",
-        "autoscaling:DescribeAutoScalingGroups",
-      ]
-      Resource = var.autoscaling_group_arn
-    }]
+    Statement = [
+      {
+        Sid      = "StartRefreshOnThisAsgOnly"
+        Effect   = "Allow"
+        Action   = ["autoscaling:StartInstanceRefresh"]
+        Resource = var.autoscaling_group_arn
+      },
+      {
+        Sid    = "DescribeActionsRequireWildcardResource"
+        Effect = "Allow"
+        Action = [
+          "autoscaling:DescribeInstanceRefreshes",
+          "autoscaling:DescribeAutoScalingGroups",
+        ]
+        Resource = "*"
+      },
+    ]
   })
 }

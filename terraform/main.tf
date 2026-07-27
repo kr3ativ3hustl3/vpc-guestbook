@@ -91,5 +91,5 @@ module "github_cicd" {
 
   project_name          = var.project_name
   github_repo           = var.github_repo
-  autoscaling_group_arn  = module.compute.autoscaling_group_arn
+  autoscaling_group_arn = module.compute.autoscaling_group_arn
 }
