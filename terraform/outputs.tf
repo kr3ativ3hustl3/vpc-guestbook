@@ -27,3 +27,13 @@ output "db_security_group_id" {
   description = "RDS security group ID — needed when wiring up the app tier in Phase 4"
   value       = module.database.security_group_id
 }
+
+output "app_security_group_id" {
+  description = "App tier security group ID — needed in Phase 4 for the ALB and RDS rules"
+  value       = module.compute.app_security_group_id
+}
+
+output "autoscaling_group_name" {
+  description = "Auto Scaling Group name"
+  value       = module.compute.autoscaling_group_name
+}

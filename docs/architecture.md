@@ -83,6 +83,41 @@ no real value to preserve, and skipping the snapshot avoids leftover
 manual snapshots silently costing money after a `destroy`. Worth
 stating this is a deliberate exception, not an oversight.
 
+### App fetches its own code from GitHub at boot, not baked into the AMI or user-data
+The launch template's startup script (`user_data.sh`) pulls
+`app.py`/`requirements.txt`/`templates/index.html` directly from this
+repo's `main` branch via `curl`, rather than embedding the app code
+inside the Terraform-managed user-data itself, or building a custom
+AMI with the code pre-installed. Tradeoff: a genuine dependency on the
+GitHub repo being reachable and the code already being pushed before
+instances boot (documented explicitly in the Phase 3 walkthrough,
+since getting the order wrong silently breaks every new instance). In
+exchange, a code change doesn't require rebuilding the launch
+template or an AMI — a new instance simply pulls whatever's on `main`
+at boot. A more production-grade version of this pattern would build
+a versioned AMI (via Packer) or pull from a private artifact store
+rather than a public GitHub raw URL.
+
+### DB credentials via SSM Parameter Store, not embedded in user-data
+Putting the database password directly in a launch template's
+user-data means it's retrievable by anyone with permission to
+describe that launch template or instance — a broader exposure
+surface than necessary. Instead, the password lives in SSM Parameter
+Store as a SecureString (encrypted with AWS's managed SSM key), and
+the instance's IAM role is scoped to read only that one specific
+parameter path — nothing else in SSM, no other AWS service.
+
+### user_data.sh is a plain file, not run through Terraform's `templatefile()`
+`templatefile()` requires escaping every bash `${VAR}` as `$${VAR}` to
+stop Terraform from trying to interpret them as its own
+interpolations — a fragile, error-prone pattern once a script has more
+than a couple of variables (this exact class of bug caused real,
+time-consuming problems in project 1's Terraform heredocs). Since
+nothing in this script actually needs a value substituted in by
+Terraform (the region is fetched dynamically from instance metadata,
+the SSM parameter path is a fixed string), keeping it as a plain file
+referenced via `file()` avoids the entire problem.
+
 ## Cost breakdown (expected)
 
 | Service | Free tier | Expected usage | Expected cost |
@@ -114,6 +149,11 @@ tradeoff a junior cloud engineer needs to reason about.
   database is unreachable from anything until Phase 4 explicitly
   grants the app tier access. Not publicly accessible; sits in
   subnets with no internet route at all.
+- Phase 3: no SSH keys anywhere — admin access is via SSM Session
+  Manager only, through an IAM role. DB password stored as an SSM
+  SecureString, never in the launch template or user-data in
+  plaintext; the instance role can read only that one parameter path.
+  App tier security group also created with zero inbound rules.
 
 ## Observability posture (running list, updated per phase)
 

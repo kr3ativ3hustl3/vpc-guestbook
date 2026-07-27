@@ -55,3 +55,18 @@ module "database" {
   db_username         = var.db_username
   db_password         = var.db_password
 }
+
+module "compute" {
+  source = "./modules/compute"
+
+  providers = { aws = aws }
+
+  project_name       = var.project_name
+  vpc_id             = module.networking.vpc_id
+  private_subnet_ids = module.networking.private_subnet_ids
+  db_address         = module.database.db_address
+  db_port            = module.database.db_port
+  db_name            = module.database.db_name
+  db_username        = var.db_username
+  db_password        = var.db_password
+}

@@ -12,10 +12,11 @@ demonstrates core AWS networking and traditional compute — the pieces
 most cloud engineering interviews ask about directly: VPCs, subnets,
 security groups, load balancing, and Auto Scaling.
 
-**Status:** 🚧 In progress — Phase 2 of 6 complete (RDS Postgres in
-isolated subnets). Reminder: RDS is free-tier eligible for 12 months;
-NAT Gateway from Phase 1 continues billing ~$32/month — see cost note
-in docs/architecture.md.
+**Status:** 🚧 In progress — Phase 3 of 6 complete (compute tier: EC2 +
+Auto Scaling Group running the guestbook app, no SSH). App isn't
+publicly reachable yet — that's Phase 4. Reminder: NAT Gateway from
+Phase 1 continues billing ~$32/month — see cost note in
+docs/architecture.md.
 
 ## Architecture
 
@@ -70,7 +71,7 @@ vpc-guestbook/
 - [x] **Phase 0** — Project scaffold, Terraform state (reusing project 1's backend)
 - [x] **Phase 1** — Networking: VPC, subnets, NAT gateway, route tables. See [`terraform/PHASE1-networking.md`](terraform/PHASE1-networking.md).
 - [x] **Phase 2** — Database: RDS Postgres in isolated subnet. See [`terraform/PHASE2-database.md`](terraform/PHASE2-database.md).
-- [ ] **Phase 3** — Compute: launch template, Auto Scaling Group, guestbook app
+- [x] **Phase 3** — Compute: launch template, Auto Scaling Group, guestbook app. See [`terraform/PHASE3-compute.md`](terraform/PHASE3-compute.md).
 - [ ] **Phase 4** — Load balancer + security groups (least-privilege between tiers)
 - [ ] **Phase 5** — SSM Session Manager access, CI/CD
 - [ ] **Phase 6** — Final polish & write-up
