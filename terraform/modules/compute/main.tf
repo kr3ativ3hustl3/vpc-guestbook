@@ -181,10 +181,14 @@ resource "aws_autoscaling_group" "app" {
   desired_capacity    = 2
   vpc_zone_identifier = var.private_subnet_ids
 
-  # EC2-based health checks for now — Phase 4 switches this to ELB
-  # health checks once the target group exists, so unhealthy instances
-  # get detected via the actual /health endpoint through the ALB.
-  health_check_type = "EC2"
+  # ELB health checks — Phase 4 attaches this ASG to the ALB's target
+  # group via a separate aws_autoscaling_attachment resource (avoids a
+  # circular dependency between this module and the load-balancer
+  # module — see docs/architecture.md). Once attached, ASG considers
+  # an instance unhealthy if the ALB's health check on it fails, not
+  # just basic EC2 status.
+  health_check_type         = "ELB"
+  health_check_grace_period = 300
 
   launch_template {
     id      = aws_launch_template.app.id

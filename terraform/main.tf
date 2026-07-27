@@ -70,3 +70,16 @@ module "compute" {
   db_username        = var.db_username
   db_password        = var.db_password
 }
+
+module "load_balancer" {
+  source = "./modules/load-balancer"
+
+  providers = { aws = aws }
+
+  project_name           = var.project_name
+  vpc_id                 = module.networking.vpc_id
+  public_subnet_ids      = module.networking.public_subnet_ids
+  app_security_group_id  = module.compute.app_security_group_id
+  db_security_group_id   = module.database.security_group_id
+  autoscaling_group_name = module.compute.autoscaling_group_name
+}

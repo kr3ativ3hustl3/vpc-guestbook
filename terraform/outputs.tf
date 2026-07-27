@@ -37,3 +37,8 @@ output "autoscaling_group_name" {
   description = "Auto Scaling Group name"
   value       = module.compute.autoscaling_group_name
 }
+
+output "site_url" {
+  description = "The URL to actually visit the guestbook app"
+  value       = "http://${module.load_balancer.alb_dns_name}"
+}

@@ -118,6 +118,18 @@ Terraform (the region is fetched dynamically from instance metadata,
 the SSM parameter path is a fixed string), keeping it as a plain file
 referenced via `file()` avoids the entire problem.
 
+### `aws_autoscaling_attachment`, not a direct `target_group_arns` reference
+Connecting the Auto Scaling Group (Phase 3) to the target group
+(Phase 4) looks at first like it just needs the ASG resource to list
+`target_group_arns = [...]`. But that target group doesn't exist until
+the load-balancer module creates it, and the load-balancer module
+needs the compute module's app security group ID and ASG name — a
+genuine circular dependency between the two modules, which Terraform
+doesn't allow. `aws_autoscaling_attachment` is a separate resource
+that bridges an existing ASG (referenced by name, a one-directional
+input) to a target group, breaking the cycle cleanly rather than
+merging the two modules into one to work around it.
+
 ## Cost breakdown (expected)
 
 | Service | Free tier | Expected usage | Expected cost |
@@ -154,6 +166,12 @@ tradeoff a junior cloud engineer needs to reason about.
   SecureString, never in the launch template or user-data in
   plaintext; the instance role can read only that one parameter path.
   App tier security group also created with zero inbound rules.
+- Phase 4: only the ALB accepts traffic from the public internet
+  (port 80 only). The app tier accepts traffic ONLY from the ALB's
+  security group, on the app port only. RDS accepts traffic ONLY from
+  the app tier's security group, on the Postgres port only. No tier
+  is directly reachable by anything except the tier immediately in
+  front of it.
 
 ## Observability posture (running list, updated per phase)
 
