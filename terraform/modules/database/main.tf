@@ -65,6 +65,7 @@ resource "aws_db_instance" "main" {
   #checkov:skip=CKV_AWS_293:Deletion protection would block this project's established terraform destroy-after-verification workflow, used specifically to keep AWS costs at zero between work sessions.
   #checkov:skip=CKV2_AWS_60:copy_tags_to_snapshot is moot here - skip_final_snapshot=true means no snapshots are ever created to copy tags to.
   #checkov:skip=CKV2_AWS_30:Enabling Postgres query logging requires a new aws_db_parameter_group resource - genuinely new infrastructure, out of scope for a zero-new-infrastructure security pass.
+  #checkov:skip=CKV_AWS_354:Performance Insights (enabled below, free for the standard 7-day retention) defaults to AWS's managed key for encryption - a Customer-Managed Key costs ~$1/month and is new infrastructure, out of scope for this pass.
   identifier     = "${var.project_name}-db"
   engine         = "postgres"
   engine_version = "16.4"

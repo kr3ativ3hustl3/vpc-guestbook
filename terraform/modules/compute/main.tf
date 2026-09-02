@@ -44,30 +44,35 @@ data "aws_ssm_parameter" "al2023_ami" {
 ##############################################################################
 
 resource "aws_ssm_parameter" "db_host" {
+  #checkov:skip=CKV_AWS_337:A Customer-Managed KMS Key costs ~$1/month per key and is genuinely new infrastructure - AWS's default SecureString encryption (used here) is free and already a real hardening over the plain String type this replaced.
   name  = "/${var.project_name}/db/host"
   type  = "SecureString"
   value = var.db_address
 }
 
 resource "aws_ssm_parameter" "db_port" {
+  #checkov:skip=CKV_AWS_337:Same reasoning as db_host above - a CMK is a new, billable resource out of scope for this pass.
   name  = "/${var.project_name}/db/port"
   type  = "SecureString"
   value = tostring(var.db_port)
 }
 
 resource "aws_ssm_parameter" "db_name" {
+  #checkov:skip=CKV_AWS_337:Same reasoning as db_host above - a CMK is a new, billable resource out of scope for this pass.
   name  = "/${var.project_name}/db/name"
   type  = "SecureString"
   value = var.db_name
 }
 
 resource "aws_ssm_parameter" "db_username" {
+  #checkov:skip=CKV_AWS_337:Same reasoning as db_host above - a CMK is a new, billable resource out of scope for this pass.
   name  = "/${var.project_name}/db/username"
   type  = "SecureString"
   value = var.db_username
 }
 
 resource "aws_ssm_parameter" "db_password" {
+  #checkov:skip=CKV_AWS_337:Same reasoning as db_host above - a CMK is a new, billable resource out of scope for this pass.
   name  = "/${var.project_name}/db/password"
   type  = "SecureString"
   value = var.db_password
