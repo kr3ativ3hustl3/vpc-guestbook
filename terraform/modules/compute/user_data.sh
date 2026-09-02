@@ -30,15 +30,16 @@ curl -fsSL -o templates/index.html https://raw.githubusercontent.com/kr3ativ3hus
 
 pip3 install -r requirements.txt
 
-# Fetch DB connection details from SSM Parameter Store — the password
-# is stored as a SecureString and only decrypted here via
-# --with-decryption, which requires the IAM role attached to this
-# instance to have kms:Decrypt + ssm:GetParameter permission,
-# scoped to exactly this parameter path.
-DB_HOST=$(aws ssm get-parameter --name "/vpc-guestbook/db/host" --region "$REGION" --query Parameter.Value --output text)
-DB_PORT=$(aws ssm get-parameter --name "/vpc-guestbook/db/port" --region "$REGION" --query Parameter.Value --output text)
-DB_NAME=$(aws ssm get-parameter --name "/vpc-guestbook/db/name" --region "$REGION" --query Parameter.Value --output text)
-DB_USER=$(aws ssm get-parameter --name "/vpc-guestbook/db/username" --region "$REGION" --query Parameter.Value --output text)
+# Fetch DB connection details from SSM Parameter Store — all five
+# parameters are now SecureString (encrypted at rest with no extra
+# cost, previously only the password was), so all five need
+# --with-decryption. This requires the IAM role attached to this
+# instance to have ssm:GetParameter permission, scoped to exactly
+# this parameter path.
+DB_HOST=$(aws ssm get-parameter --name "/vpc-guestbook/db/host" --with-decryption --region "$REGION" --query Parameter.Value --output text)
+DB_PORT=$(aws ssm get-parameter --name "/vpc-guestbook/db/port" --with-decryption --region "$REGION" --query Parameter.Value --output text)
+DB_NAME=$(aws ssm get-parameter --name "/vpc-guestbook/db/name" --with-decryption --region "$REGION" --query Parameter.Value --output text)
+DB_USER=$(aws ssm get-parameter --name "/vpc-guestbook/db/username" --with-decryption --region "$REGION" --query Parameter.Value --output text)
 DB_PASSWORD=$(aws ssm get-parameter --name "/vpc-guestbook/db/password" --with-decryption --region "$REGION" --query Parameter.Value --output text)
 
 cat > /opt/guestbook/.env << ENVEOF

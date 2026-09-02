@@ -35,27 +35,35 @@ data "aws_ssm_parameter" "al2023_ami" {
 # String since it isn't sensitive on its own.
 ##############################################################################
 
+##############################################################################
+# All five parameters use SecureString, encrypted with AWS's default
+# SSM-managed KMS key (alias/aws/ssm) at no additional cost — even
+# non-secret values (host, port, name, username) get encryption at
+# rest, which costs nothing extra and is a genuine hardening over the
+# String type used here originally.
+##############################################################################
+
 resource "aws_ssm_parameter" "db_host" {
   name  = "/${var.project_name}/db/host"
-  type  = "String"
+  type  = "SecureString"
   value = var.db_address
 }
 
 resource "aws_ssm_parameter" "db_port" {
   name  = "/${var.project_name}/db/port"
-  type  = "String"
+  type  = "SecureString"
   value = tostring(var.db_port)
 }
 
 resource "aws_ssm_parameter" "db_name" {
   name  = "/${var.project_name}/db/name"
-  type  = "String"
+  type  = "SecureString"
   value = var.db_name
 }
 
 resource "aws_ssm_parameter" "db_username" {
   name  = "/${var.project_name}/db/username"
-  type  = "String"
+  type  = "SecureString"
   value = var.db_username
 }
 
@@ -104,8 +112,8 @@ resource "aws_iam_role_policy" "read_db_params" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = ["ssm:GetParameter"]
+      Effect = "Allow"
+      Action = ["ssm:GetParameter"]
       Resource = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/${var.project_name}/db/*"
     }]
   })
@@ -127,11 +135,24 @@ resource "aws_security_group" "app" {
   description = "App tier - no inbound rules yet, added in Phase 4"
   vpc_id      = var.vpc_id
 
+  # Scoped to exactly what the app tier needs outbound: HTTPS (SSM
+  # agent, AWS API calls, AL2023 package repos) and Postgres (RDS).
+  # Previously a single "-1/all ports" rule — Checkov (CKV_AWS_382)
+  # correctly flags unrestricted egress as broader than necessary,
+  # even though it's a lower-risk pattern than open ingress.
   egress {
-    description = "Allow all outbound"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "HTTPS - SSM, AWS API, package repos"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    description = "Postgres to RDS"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -160,6 +181,16 @@ resource "aws_launch_template" "app" {
   # via SSM Session Manager only (granted through the IAM role above),
   # so there's no SSH key to generate, distribute, or lose.
   user_data = base64encode(file("${path.module}/user_data.sh"))
+
+  # Require IMDSv2 (session-token-based metadata requests) — blocks
+  # the classic SSRF-to-credential-theft pattern that IMDSv1's
+  # unauthenticated requests allow. Free, no functional downside for
+  # this project's user_data (which already only reads metadata, no
+  # writes).
+  metadata_options {
+    http_tokens   = "required"
+    http_endpoint = "enabled"
+  }
 
   tag_specifications {
     resource_type = "instance"

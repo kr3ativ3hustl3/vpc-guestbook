@@ -20,6 +20,7 @@ terraform {
 # VPC + Internet Gateway
 ##############################################################################
 
+#checkov:skip=CKV2_AWS_11:VPC Flow Logs require a new destination (S3 or CloudWatch Logs) - genuinely new infrastructure with real storage cost, out of scope for a zero-new-infrastructure security pass.
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
@@ -27,6 +28,20 @@ resource "aws_vpc" "main" {
 
   tags = {
     Name    = "${var.project_name}-vpc"
+    Project = var.project_name
+  }
+}
+
+# Locks the VPC's implicit default security group to deny all traffic
+# — free, zero new resources (every VPC already has one whether or
+# not Terraform manages it), and good practice regardless: nothing in
+# this project actually relies on the default SG, since every real
+# resource uses its own purpose-built security group.
+resource "aws_default_security_group" "default" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name    = "${var.project_name}-default-sg-locked"
     Project = var.project_name
   }
 }
@@ -44,6 +59,7 @@ resource "aws_internet_gateway" "main" {
 # Subnets — one of each tier per Availability Zone
 ##############################################################################
 
+#checkov:skip=CKV_AWS_130:Auto-assigned public IPs are the correct, intentional behavior here - this subnet exists specifically to host the internet-facing ALB, which requires a public IP to be reachable at all.
 resource "aws_subnet" "public" {
   count                   = length(var.availability_zones)
   vpc_id                  = aws_vpc.main.id
