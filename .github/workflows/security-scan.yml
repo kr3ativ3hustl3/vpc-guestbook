@@ -1,0 +1,43 @@
+name: Security Scan
+
+# Runs entirely inside GitHub Actions — no AWS credentials, no
+# secrets, no cost. Scans Terraform for misconfigurations and the
+# whole repo for accidentally committed secrets, on every push and
+# pull request against main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  terraform-scan:
+    name: Terraform Security Scan (Checkov)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: terraform
+          framework: terraform
+          output_format: cli
+          soft_fail: false
+
+  secret-scan:
+    name: Secret Scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # gitleaks scans git history, not just the current
+          # checkout — needs the full history to do that properly.
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
