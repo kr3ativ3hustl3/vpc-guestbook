@@ -140,18 +140,6 @@ resource "aws_security_group" "app" {
   description = "App tier - no inbound rules yet, added in Phase 4"
   vpc_id      = var.vpc_id
 
-  # DEMO: intentionally insecure rule to exercise the Checkov gate.
-  # This project has used SSM Session Manager instead of SSH since
-  # Phase 2 specifically to avoid ever needing this — see
-  # docs/architecture.md. Removed in the very next commit.
-  ingress {
-    description = "DEMO - SSH from anywhere (intentional misconfiguration)"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   # Scoped to exactly what the app tier needs outbound: HTTPS (SSM
   # agent, AWS API calls, AL2023 package repos) and Postgres (RDS).
   # Previously a single "-1/all ports" rule — Checkov (CKV_AWS_382)
